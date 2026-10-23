@@ -1,0 +1,80 @@
+name: Verificar la plantilla
+
+# Se corre en cada cambio, a mano cuando se quiera, y una vez por semana: una
+# versión nueva de Rust o de una dependencia puede romper la plantilla sin que
+# nadie haya tocado nada, y es mejor enterarse por este rojo que por el primer
+# lector que la clone.
+# ⚠️ En un repositorio público, GitHub apaga solo la corrida programada si el
+# repositorio pasa 60 días sin actividad; hay que volver a encenderla a mano.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 13 * * 1" # lunes 13:17 UTC (7:17 en la Ciudad de México)
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: never
+
+jobs:
+  verificar:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # stable: la más reciente. 1.85.0: la que declara rust-version en
+          # Cargo.toml (la primera con la edición 2024). Si algún día una
+          # dependencia pide más, este rojo avisa que rust-version ya miente.
+          - { os: ubuntu-latest, rust: stable }
+          - { os: ubuntu-latest, rust: "1.85.0" }
+          # macOS: la frontera se corre con el bash que trae el sistema (el
+          # 3.2), que es el que tiene quien clona en una Mac sin Homebrew.
+          - { os: macos-latest, rust: stable }
+    name: Rust ${{ matrix.rust }} · ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+          components: clippy, rustfmt
+
+      # El formato y los avisos de clippy cambian entre versiones: se exigen
+      # solo con la estable.
+      - name: Formato (rustfmt no debe proponer ningún cambio)
+        if: matrix.rust == 'stable'
+        run: cargo fmt --check
+
+      - name: Clippy, sin un solo aviso (código y pruebas)
+        if: matrix.rust == 'stable'
+        run: cargo clippy --all-targets --locked -- -D warnings
+
+      # --locked: con exactamente las versiones de Cargo.lock. Si Cargo.lock
+      # falta o cargo quisiera cambiarlo, este paso falla en vez de resolver
+      # otras versiones por su cuenta.
+      - name: Pruebas unitarias, de integración y de documentación
+        run: cargo test --locked
+
+      # La frontera que sabe fallar: una prueba de tests/ que llama a una
+      # función privada TIENE que no compilar, y por la razón exacta (E0603).
+      # Si alguna vez compila, este paso se pone rojo. Se llama con bash para no
+      # depender de que el archivo conserve su permiso de ejecución.
+      - name: Frontera de la privacidad (tests/ solo ve lo que es pub)
+        if: runner.os == 'Linux'
+        run: bash herramientas/probar-frontera.sh
+
+      # En macOS, con /bin/bash explícito y en UTF-8: ese bash 3.2 lee mal una
+      # variable pegada a una letra con acento o a una comilla «», y un guion
+      # que se corta a la mitad puede salir con 0. Esta fila lo vigila.
+      - name: Frontera con el bash de macOS (/bin/bash 3.2)
+        if: runner.os == 'macOS'
+        env:
+          LANG: en_US.UTF-8
+          LC_ALL: en_US.UTF-8
+        run: |
+          /bin/bash --version | head -n 1
+          /bin/bash herramientas/probar-frontera.sh

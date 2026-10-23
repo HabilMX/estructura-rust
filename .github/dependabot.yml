@@ -1,0 +1,13 @@
+# Una vez al mes, Dependabot propone actualizar las dependencias de Cargo
+# (Cargo.toml y Cargo.lock) y las acciones del CI. Cada propuesta pasa por el
+# mismo CI: si una versión nueva rompe algo, se ve en su rojo.
+version: 2
+updates:
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"

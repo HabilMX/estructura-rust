@@ -1,0 +1,15 @@
+# La lista de ejemplo que usa «Córrelo». Cada elemento es un servicio.
+# timeout_ms va en milisegundos y es opcional (por omisión, 2000).
+
+- nombre: rust-lang.org
+  url: https://www.rust-lang.org
+  timeout_ms: 5000
+
+- nombre: doc.rust-lang.org
+  url: https://doc.rust-lang.org/book/
+  timeout_ms: 5000
+
+# .invalid es un dominio reservado que nunca existe: este servicio siempre
+# sale CAIDO, para que veas cómo se ve uno.
+- nombre: no-existe
+  url: http://servicio-que-no-existe.invalid

@@ -1,0 +1,7 @@
+# Lo que deja cargo al compilar: se rehace en cada máquina, nunca se sube.
+/target/
+
+# Editores y sistema operativo.
+.idea/
+.vscode/
+.DS_Store
